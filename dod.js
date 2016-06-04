@@ -95,7 +95,7 @@ cli
                  'bottom': '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
                  'left': '', 'left-mid': '', 'mid': '', 'mid-mid': '',
                  'right': '', 'right-mid': '', 'middle': '' },
-        head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP',
+        head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (v4)',
                'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION'],
         style: {
           'compact' : true,
@@ -105,11 +105,18 @@ cli
 
       droplets.forEach(function (droplet) {
         basicInfo.push(
-          [droplet.id, moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'), droplet.name, droplet.networks.v4[0].ip_address,
-           droplet.status, droplet.image.distribution, droplet.size_slug, droplet.disk + 'GB', droplet.region.name]
+          [droplet.id,
+           moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
+           droplet.name,
+           droplet.networks.v4[0].ip_address,
+           (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
+           droplet.image.distribution,
+           droplet.size_slug,
+           droplet.disk + 'gb',
+           droplet.region.name + ' (' + droplet.region.slug + ')']
         );
       });
-      console.log(basicInfo.toString());
+      console.log('\n' + basicInfo.toString() + '\n');
     });
   });
 
