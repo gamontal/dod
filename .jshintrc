@@ -1,0 +1,13 @@
+{
+  "node": true,
+  "esversion": 6,
+  "strict": true,
+  "unused":true,
+  "undef": true,
+  "curly": true,
+  "immed": true,
+  "loopfunc": false,
+  "trailing": true,
+  "white": true,
+  "indent": 2 
+}
