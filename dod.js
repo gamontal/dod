@@ -9,8 +9,8 @@ const moment = require('moment');
 const ora = require('ora');
 const Table = require('cli-table');
 const chalk = require('chalk');
-const spinner = ora({ text: chalk.cyan('Fetching droplets ...'), spinner: 'line' });
 const cli = require('commander');
+const spinner = ora({ text: chalk.cyan('Fetching ...'), spinner: 'line' });
 
 // Get the user's home directory
 function getUserHome () {
@@ -20,11 +20,9 @@ function getUserHome () {
 // Fetch the configuration file
 const CONFIG_FILE = getUserHome() + '/.dodrc.yml';
 
-const urls = ['https://api.digitalocean.com/v2/droplets'];
 let token;
 
 (function () {
-
   // make sure the configuration file exists
   fs.stat(CONFIG_FILE, function (err) {
     if (err === null) {
@@ -43,18 +41,44 @@ let token;
   }
 }());
 
+const baseUrl = 'https://api.digitalocean.com/v2/droplets';
+const auth = {
+  'auth': { 'bearer': token }
+};
+
+let printKernels = function (kernels) {
+  return console.log(kernels);
+};
+
+let printSnapshots = function (snapshots) {
+  return console.log(snapshots);
+};
+
+let printBackups = function (backups) {
+  return console.log(backups);
+};
+
+let printActions = function (actions) {
+  return console.log(actions);
+};
+
+let printNeighbors = function (neighbors) {
+  return console.log(neighbors);
+};
+
+let printAllNeighbors = function (neighbors) {
+  return;
+};
+
 cli
   .version(require('./package.json').version);
 
 cli
   .command('authorize <token>')
+  .description('set a new DigitalOcean account token')
   .action(function (token) {
 
-    request.get(urls[0], {
-      'auth': {
-        'bearer': token
-      }
-    }).on('error', function (err) {
+    request.get(baseUrl, auth).on('error', function (err) {
       console.log('Error: ' + err);
       return;
     });
@@ -69,14 +93,78 @@ cli
   });
 
 cli
+  .arguments('<droplet_name|droplet_id>')
+  .option('-k, --kernels', 'list of all kernels available to a Droplet')
+  .option('-s, --snapshots', 'retrieve the snapshots that have been created from a Droplet')
+  .option('-b, --backups', 'retrieve any backups associated with a Droplet')
+  .option('-a, --actions', 'retrieve all actions that have been executed on a Droplet')
+  .option('-n, --neighbors', 'retrieve a list of droplets that are running on the same physical server')
+  .option('-N, --all-neighbors', 'retrieve a list of any droplets that are running on the same physical hardware')
+  .action(function (arg) {
+    spinner.start();
+
+    request.get(baseUrl, auth, function (error, response, body) {
+      let data = JSON.parse(body);
+
+      if (error) {
+        console.log('Error: ' + error);
+        return;
+      } else if (data.id == 'unauthorized') {
+        console.log('Error: account unauthorized, please provide a valid API token.');
+        return;
+      }
+
+      const droplets = data.droplets;
+      let droplet = {};
+
+      droplets.forEach(function (d) {
+        if ((d.name === arg) || (d.id === Number(arg))) {
+          droplet = d;
+        }
+      });
+
+      let dropletId = droplet.id;
+      let option;
+
+      if (cli['kernels']) { option = 'kernels'; }
+      else if (cli['snapshots']) { option = 'snapshots'; }
+      else if (cli['backups']) { option = 'backups'; }
+      else if (cli['actions']) { option = 'actions'; }
+      else if (cli['neighbors']) { option = 'neighbors'; }
+      else {
+        spinner.stop();
+        return (droplet.id === undefined ? console.log('Server not found') : console.log(droplet));
+      }
+
+      request.get(baseUrl + '/' + dropletId + '/' + option, auth, function (error, response, body) {
+        spinner.stop();
+
+        let output = JSON.parse(body);
+
+        switch (option) {
+        case 'kernels':
+          printKernels(output); break;
+        case 'snapshots':
+          printSnapshots(output); break;
+        case 'backups':
+          printBackups(output); break;
+        case 'actions':
+          printActions(output); break;
+        case 'neighbors':
+          printNeighbors(output); break;
+        default:
+          break;
+        }
+      });
+    });
+  });
+
+cli
   .command('all')
+  .description('list all available Droplets')
   .action(function () {
     spinner.start();
-    request.get(urls[0], {
-      'auth': {
-        'bearer': token
-      }
-    }, function (error, response, body) {
+    request.get(baseUrl, auth, function (error, response, body) {
       spinner.stop();
 
       let data = JSON.parse(body);
@@ -117,38 +205,6 @@ cli
         );
       });
       console.log('\n' + basicInfo.toString() + '\n');
-    });
-  });
-
-cli
-  .arguments('<droplet_name>')
-  .action(function (name) {
-    request.get(urls[0], {
-      'auth': {
-        'bearer': token
-      }
-    }, function (error, response, body) {
-
-      let data = JSON.parse(body);
-
-      if (error) {
-        console.log('Error: ' + error);
-        return;
-      } else if (data.id == 'unauthorized') {
-        console.log('Error: account unauthorized, please provide a valid API token.');
-        return;
-      }
-
-      const droplets = data.droplets;
-      let droplet = {};
-
-      droplets.forEach(function (d) {
-        if (d.name === name) {
-          droplet = d;
-        }
-      });
-
-      return (droplet.id === undefined ? console.log('Server not found') : console.log(droplet));
     });
   });
 
