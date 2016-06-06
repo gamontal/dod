@@ -11,9 +11,19 @@ const Table = require('cli-table');
 const chalk = require('chalk');
 const cli = require('commander');
 const spinner = ora({ text: chalk.cyan('Fetching ...'), spinner: 'line' });
+const tableOptions = {
+  chars: { 'top': '', 'top-mid': '', 'top-left': '', 'top-right': '',
+           'bottom': '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
+           'left': '', 'left-mid': '', 'mid': '', 'mid-mid': '',
+           'right': '', 'right-mid': '', 'middle': '' },
+  style: {
+    'compact' : true,
+    'head': ['inverse']
+  }
+};
 
 // Get the user's home directory
-function getUserHome () {
+let getUserHome = function () {
   return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 }
 
@@ -41,44 +51,137 @@ let token;
   }
 }());
 
-const baseUrl = 'https://api.digitalocean.com/v2/droplets';
+const baseUrl = 'https://api.digitalocean.com/v2';
 const auth = {
   'auth': { 'bearer': token }
 };
 
 let printKernels = function (kernels) {
-  return console.log(kernels);
+  let kernelsList = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'NAME', 'VERSION']
+  });
+
+  kernels.kernels.forEach(function (kernel) {
+    kernelsList.push([
+      kernel.id,
+      kernel.name,
+      kernel.version
+    ]);
+  });
+
+  return console.log('\n' + kernelsList.toString() + '\n');
 };
 
 let printSnapshots = function (snapshots) {
-  return console.log(snapshots);
+  let snapshotsList = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'CREATED', 'NAME', 'DISTRIBUTION', 'PUBLIC', 'REGIONS', 'SIZE', 'MIN DISK SIZE']
+  });
+
+  snapshots.snapshots.forEach(function (snapshot) {
+    snapshotsList.push([
+      snapshot.id,
+      snapshot.created_at,
+      snapshot.name,
+      snapshot.distribution,
+      snapshot.public,
+      snapshot.regions,
+      snapshot.size_gigabytes,
+      snapshot.min_disk_size
+    ]);
+  });
+
+  return console.log('\n' + snapshotsList.toString() + '\n');
 };
 
 let printBackups = function (backups) {
-  return console.log(backups);
+  let backupsList = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'CREATED', 'NAME',
+           'DISTRIBUTION', 'PUBLIC',
+           'REGIONS', 'SIZE', 'MIN DISK SIZE']
+  });
+
+  backups.backups.forEach(function (backup) {
+    backupsList.push([
+      backups.id,
+      backups.created_at,
+      backups.name,
+      backups.distribution,
+      backups.public,
+      backups.regions,
+      backups.size,
+      backups.min_disk_size
+    ]);
+  });
+
+  return console.log('\n' + backupsList.toString() + '\n');
 };
 
 let printActions = function (actions) {
-  return console.log(actions);
+  let actionsList = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'TYPE', 'STATUS',
+           'STARTED', 'COMPLETED', 'RESOURCE ID',
+           'RESOURCE TYPE', 'REGION']
+  });
+
+  actions.actions.forEach(function (action) {
+    actionsList.push([
+      action.id,
+      action.type,
+      (action.status === 'in-progress' ? (
+        chalk.yellow(action.status)) : action.status === 'errored' ? (
+          chalk.red(action.status)) : chalk.green(action.status)),
+      moment(action.started_at).format('MMMM Do YYYY, h:mm:ss a'),
+      moment(action.completed_at).format('MMMM Do YYYY, h:mm:ss a'),
+      action.resource_id,
+      action.resource_type,
+      action.region_slug
+    ]);
+  });
+
+  return console.log('\n' + actionsList.toString() + '\n')
 };
 
 let printNeighbors = function (neighbors) {
-  return console.log(neighbors);
-};
+  let neighborsList = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (v4)',
+           'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
+  });
 
-let printAllNeighbors = function (neighbors) {
-  return;
+  neighbors.droplets.forEach(function (droplet) {
+    neighborsList.push([
+      droplet.id,
+      moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
+      droplet.name,
+      droplet.networks.v4[0].ip_address,
+      (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
+      droplet.image.distribution,
+      droplet.size_slug,
+      droplet.disk + 'gb',
+      droplet.region.name + ' (' + droplet.region.slug + ')'
+    ]);
+  });
+  return console.log('\n' + neighborsList.toString() + '\n');
 };
 
 cli
-  .version(require('./package.json').version);
+  .version(require('./package.json').version)
+  .usage('[command] [options] <droplet_name|droplet_id>');
 
 cli
   .command('authorize <token>')
   .description('set a new DigitalOcean account token')
   .action(function (token) {
-
-    request.get(baseUrl, auth).on('error', function (err) {
+    request.get(baseUrl + '/droplets', auth).on('error', function (err) {
       console.log('Error: ' + err);
       return;
     });
@@ -99,11 +202,10 @@ cli
   .option('-b, --backups', 'retrieve any backups associated with a Droplet')
   .option('-a, --actions', 'retrieve all actions that have been executed on a Droplet')
   .option('-n, --neighbors', 'retrieve a list of droplets that are running on the same physical server')
-  .option('-N, --all-neighbors', 'retrieve a list of any droplets that are running on the same physical hardware')
   .action(function (arg) {
     spinner.start();
 
-    request.get(baseUrl, auth, function (error, response, body) {
+    request.get(baseUrl + '/droplets', auth, function (error, response, body) {
       let data = JSON.parse(body);
 
       if (error) {
@@ -124,6 +226,7 @@ cli
       });
 
       let dropletId = droplet.id;
+      let dropletName = droplet.name;
       let option;
 
       if (cli['kernels']) { option = 'kernels'; }
@@ -136,10 +239,16 @@ cli
         return (droplet.id === undefined ? console.log('Server not found') : console.log(droplet));
       }
 
-      request.get(baseUrl + '/' + dropletId + '/' + option, auth, function (error, response, body) {
+      request.get(baseUrl + '/droplets/' + dropletId + '/' + option, auth, function (error, response, body) {
         spinner.stop();
 
         let output = JSON.parse(body);
+        let totalResults = output[Object.keys(output)[0]].length;
+
+        console.log('Droplet: ' + dropletName);
+        console.log('Total results: ' + totalResults);
+
+        if (totalResults === 0) { return; }
 
         switch (option) {
         case 'kernels':
@@ -160,11 +269,11 @@ cli
   });
 
 cli
-  .command('all')
+  .command('list [tag_name]')
   .description('list all available Droplets')
-  .action(function () {
+  .action(function (tag_name) {
     spinner.start();
-    request.get(baseUrl, auth, function (error, response, body) {
+    request.get(baseUrl + '/droplets?' + (tag_name ? tag_name : ''), auth, function (error, response, body) {
       spinner.stop();
 
       let data = JSON.parse(body);
@@ -178,33 +287,31 @@ cli
         return;
       }
 
-      let basicInfo = new Table({
-        chars: { 'top': '', 'top-mid': '', 'top-left': '', 'top-right': '',
-                 'bottom': '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
-                 'left': '', 'left-mid': '', 'mid': '', 'mid-mid': '',
-                 'right': '', 'right-mid': '', 'middle': '' },
+      let dropletsList = new Table({
+        chars: tableOptions.chars,
+        style: tableOptions.style,
         head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (v4)',
-               'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION'],
-        style: {
-          'compact' : true,
-          'head': ['inverse']
-        }
+               'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
       });
 
       droplets.forEach(function (droplet) {
-        basicInfo.push(
-          [droplet.id,
-           moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
-           droplet.name,
-           droplet.networks.v4[0].ip_address,
-           (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
-           droplet.image.distribution,
-           droplet.size_slug,
-           droplet.disk + 'gb',
-           droplet.region.name + ' (' + droplet.region.slug + ')']
-        );
+        dropletsList.push([
+          droplet.id,
+          moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
+          droplet.name,
+          droplet.networks.v4[0].ip_address,
+          (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
+          droplet.image.distribution,
+          droplet.size_slug,
+          droplet.disk + 'gb',
+          droplet.region.name + ' (' + droplet.region.slug + ')'
+        ]);
       });
-      console.log('\n' + basicInfo.toString() + '\n');
+
+      console.log('Droplets: ' + droplets.length);
+      console.log('\n' + dropletsList.toString() + '\n');
+
+      return;
     });
   });
 
