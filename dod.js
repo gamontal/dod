@@ -11,6 +11,8 @@ const Table = require('cli-table');
 const chalk = require('chalk');
 const cli = require('commander');
 const spinner = ora({ text: 'Fetching ...', spinner: 'line' });
+
+// cli-table (module) chars and style options (borderless table)
 const tableOptions = {
   chars: { 'top': '', 'top-mid': '', 'top-left': '', 'top-right': '',
            'bottom': '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
@@ -22,6 +24,9 @@ const tableOptions = {
   }
 };
 
+// list of common errors
+const errors = ['Error: account unauthorized, please provide a valid API token.'];
+
 // Get the user's home directory
 let getUserHome = function () {
   return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
@@ -30,32 +35,35 @@ let getUserHome = function () {
 // Fetch the configuration file
 const CONFIG_FILE = getUserHome() + '/.dodrc.yml';
 
-let token;
+let token; // this variable will store the token for the current session
 
 (function () {
   // make sure the configuration file exists
   fs.stat(CONFIG_FILE, function (err) {
     if (err === null) {
-      return;
+      return; // exit function if the config file exist
     } else if (err.code == 'ENOENT') {
-      fs.writeFile(CONFIG_FILE);
+      fs.writeFile(CONFIG_FILE); // create config file if it doesn't exist
     } else {
       console.log('Unexpected error: ', err.code);
     }
   });
 
   try {
-    token = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    token = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8')); // load config file
   } catch (e) {
     console.log(chalk.red('Type \"authorize\" and provide your API token to authorize your DigitalOcean account.'));
   }
 }());
 
-const baseUrl = 'https://api.digitalocean.com/v2';
+const baseUrl = 'https://api.digitalocean.com/v2'; // DigitalOcean API base url
+
+// store authentication object for future requests
 const auth = {
   'auth': { 'bearer': token }
 };
 
+/* Print out the list of kernels */
 let printKernels = function (kernels) {
   let kernelsList = new Table({
     chars: tableOptions.chars,
@@ -74,6 +82,7 @@ let printKernels = function (kernels) {
   return console.log('\n' + kernelsList.toString() + '\n');
 };
 
+/* Print out the list of snapshots */
 let printSnapshots = function (snapshots) {
   let snapshotsList = new Table({
     chars: tableOptions.chars,
@@ -97,6 +106,7 @@ let printSnapshots = function (snapshots) {
   return console.log('\n' + snapshotsList.toString() + '\n');
 };
 
+/* Print out the list of backups */
 let printBackups = function (backups) {
   let backupsList = new Table({
     chars: tableOptions.chars,
@@ -122,6 +132,7 @@ let printBackups = function (backups) {
   return console.log('\n' + backupsList.toString() + '\n');
 };
 
+/* Print out the list of actions */
 let printActions = function (actions) {
   let actionsList = new Table({
     chars: tableOptions.chars,
@@ -149,6 +160,7 @@ let printActions = function (actions) {
   return console.log('\n' + actionsList.toString() + '\n')
 };
 
+/* Print out the list of neighbors */
 let printNeighbors = function (neighbors) {
   let neighborsList = new Table({
     chars: tableOptions.chars,
@@ -173,9 +185,12 @@ let printNeighbors = function (neighbors) {
   return console.log('\n' + neighborsList.toString() + '\n');
 };
 
-let printDropletInfo = function () {
-  return;
+/* Print out the droplet information */
+let printDropletInfo = function (arg, droplet) {
+  spinner.stop();
+  return (droplet.id === undefined ? console.log('Error: the Droplet \"' + arg + '\" cannot be found') : console.log(droplet));
 };
+
 
 cli
   .version(require('./package.json').version)
@@ -216,7 +231,7 @@ cli
         console.log('Error: ' + error);
         return;
       } else if (data.id == 'unauthorized') {
-        console.log('Error: account unauthorized, please provide a valid API token.');
+        console.log(errors[0]);
         return;
       }
 
@@ -239,8 +254,7 @@ cli
       else if (cli['actions']) { option = 'actions'; }
       else if (cli['neighbors']) { option = 'neighbors'; }
       else {
-        spinner.stop();
-        return (droplet.id === undefined ? console.log('Error: the Droplet \"' + arg + '\" cannot be found') : console.log(droplet));
+        printDropletInfo(arg, droplet);
       }
 
       request.get(baseUrl + '/droplets/' + dropletId + '/' + option, auth, function (error, response, body) {
@@ -292,14 +306,14 @@ cli
         console.log('Error: ' + error);
         return;
       } else if (data.id == 'unauthorized') {
-        console.log('Error: account unauthorized, please provide a valid API token.');
+        console.log(errors[0]);
         return;
       }
 
       let dropletsList = new Table({
         chars: tableOptions.chars,
         style: tableOptions.style,
-        head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (v4)',
+        head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (IPv4)',
                'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
       });
 
