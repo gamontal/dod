@@ -10,7 +10,7 @@ const ora = require('ora');
 const Table = require('cli-table');
 const chalk = require('chalk');
 const cli = require('commander');
-const spinner = ora({ text: chalk.cyan('Fetching ...'), spinner: 'line' });
+const spinner = ora({ text: 'Fetching ...', spinner: 'line' });
 const tableOptions = {
   chars: { 'top': '', 'top-mid': '', 'top-left': '', 'top-right': '',
            'bottom': '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
@@ -173,6 +173,10 @@ let printNeighbors = function (neighbors) {
   return console.log('\n' + neighborsList.toString() + '\n');
 };
 
+let printDropletInfo = function () {
+  return;
+};
+
 cli
   .version(require('./package.json').version)
   .usage('[command] [options] <droplet_name|droplet_id>');
@@ -236,17 +240,22 @@ cli
       else if (cli['neighbors']) { option = 'neighbors'; }
       else {
         spinner.stop();
-        return (droplet.id === undefined ? console.log('Server not found') : console.log(droplet));
+        return (droplet.id === undefined ? console.log('Error: the Droplet \"' + arg + '\" cannot be found') : console.log(droplet));
       }
 
       request.get(baseUrl + '/droplets/' + dropletId + '/' + option, auth, function (error, response, body) {
         spinner.stop();
 
+        if (dropletName === undefined) {
+          console.log(chalk.red('Error') + ': the Droplet \"' + arg + '\" cannot be found');
+          return;
+        }
+
         let output = JSON.parse(body);
         let totalResults = output[Object.keys(output)[0]].length;
 
-        console.log('Droplet: ' + dropletName);
-        console.log('Total results: ' + totalResults);
+        console.log(chalk.cyan('Droplet') + ': ' + dropletName + ', ' +
+                    chalk.cyan('Total results') + ': ' + totalResults);
 
         if (totalResults === 0) { return; }
 
@@ -308,7 +317,7 @@ cli
         ]);
       });
 
-      console.log('Droplets: ' + droplets.length);
+      console.log(chalk.cyan('Droplets') + ': ' + droplets.length);
       console.log('\n' + dropletsList.toString() + '\n');
 
       return;
