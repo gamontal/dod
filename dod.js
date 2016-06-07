@@ -185,10 +185,30 @@ let printNeighbors = function (neighbors) {
   return console.log('\n' + neighborsList.toString() + '\n');
 };
 
-/* Print out the droplet information */
 let printDropletInfo = function (arg, droplet) {
   spinner.stop();
-  return (droplet.id === undefined ? console.log('Error: the Droplet \"' + arg + '\" cannot be found') : console.log(droplet));
+
+  let basicInfo = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (IPv4)',
+           'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
+  });
+
+  basicInfo.push([
+    droplet.id,
+    moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
+    droplet.name,
+    droplet.networks.v4[0].ip_address,
+    (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
+    droplet.image.distribution,
+    droplet.size_slug,
+    droplet.disk + 'gb',
+    droplet.region.name + ' (' + droplet.region.slug + ')'
+  ]);
+
+  console.log(chalk.cyan('Droplet') + ': ' + droplet.name);
+  console.log('\n' + basicInfo.toString() + '\n');
 };
 
 
@@ -255,6 +275,7 @@ cli
       else if (cli['neighbors']) { option = 'neighbors'; }
       else {
         printDropletInfo(arg, droplet);
+        return;
       }
 
       request.get(baseUrl + '/droplets/' + dropletId + '/' + option, auth, function (error, response, body) {
