@@ -30,7 +30,7 @@ const errors = ['Error: account unauthorized, please provide a valid API token.'
 // Get the user's home directory
 let getUserHome = function () {
   return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
-}
+};
 
 // Fetch the configuration file
 const CONFIG_FILE = getUserHome() + '/.dodrc.yml';
@@ -118,14 +118,14 @@ let printBackups = function (backups) {
 
   backups.backups.forEach(function (backup) {
     backupsList.push([
-      backups.id,
-      backups.created_at,
-      backups.name,
-      backups.distribution,
-      backups.public,
-      backups.regions,
-      backups.size,
-      backups.min_disk_size
+      backup.id,
+      backup.created_at,
+      backup.name,
+      backup.distribution,
+      backup.public,
+      backup.regions,
+      backup.size,
+      backup.min_disk_size
     ]);
   });
 
@@ -157,7 +157,7 @@ let printActions = function (actions) {
     ]);
   });
 
-  return console.log('\n' + actionsList.toString() + '\n')
+  return console.log('\n' + actionsList.toString() + '\n');
 };
 
 /* Print out the list of neighbors */
@@ -330,11 +330,11 @@ cli
       let dropletName = droplet.name;
       let option;
 
-      if (cli['kernels']) { option = 'kernels'; }
-      else if (cli['snapshots']) { option = 'snapshots'; }
-      else if (cli['backups']) { option = 'backups'; }
-      else if (cli['actions']) { option = 'actions'; }
-      else if (cli['neighbors']) { option = 'neighbors'; }
+      if (cli.kernels) { option = 'kernels'; }
+      else if (cli.snapshots) { option = 'snapshots'; }
+      else if (cli.backups) { option = 'backups'; }
+      else if (cli.actions) { option = 'actions'; }
+      else if (cli.neighbors) { option = 'neighbors'; }
       else {
         printDropletInfo(arg, droplet);
         return;
