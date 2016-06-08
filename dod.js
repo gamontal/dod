@@ -195,6 +195,18 @@ let printDropletInfo = function (arg, droplet) {
            'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
   });
 
+  let netInfo = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['VERSION', 'IP ADDRESS', 'NETMASK', 'GATEWAY', 'TYPE']
+  });
+
+  let imageTable = new Table({
+    chars: tableOptions.chars,
+    style: tableOptions.style,
+    head: ['ID', 'NAME', 'CREATED', 'DISTRIBUTION', 'PUBLIC', 'TYPE', 'SIZE']
+  });
+
   basicInfo.push([
     droplet.id,
     moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
@@ -207,8 +219,51 @@ let printDropletInfo = function (arg, droplet) {
     droplet.region.name + ' (' + droplet.region.slug + ')'
   ]);
 
-  console.log(chalk.cyan('Droplet') + ': ' + droplet.name);
+  droplet.networks.v4.forEach(function (resource) {
+    netInfo.push([
+      'v4',
+      resource.ip_address,
+      resource.netmask,
+      resource.gateway,
+      resource.type
+    ]);
+  });
+
+  droplet.networks.v6.forEach(function (resource) {
+    netInfo.push([
+      'v6',
+      resource.ip_address,
+      resource.netmask,
+      resource.gateway,
+      resource.type
+    ]);
+  });
+
+  imageTable.push([
+    droplet.image.id,
+    droplet.image.name,
+    moment(droplet.image.created_at).format('MMMM Do YYYY, h:mm:ss a'),
+    droplet.image.distribution,
+    droplet.image.public,
+    droplet.image.type,
+    Math.round(droplet.image.size_gigabytes) + 'gb'
+  ]);
+
+  console.log('\nDroplet: ' + chalk.cyan(droplet.name) +
+              '\t\tVirtual CPUs: ' + droplet.vcpus +
+              '\nLocked: ' + (droplet.locked === false ? chalk.green(droplet.locked) : chalk.red(droplet.locked)) +
+              '\t\t\t\tKernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name +
+                              ' (' + droplet.kernel.version + ')') +
+              '\nSnapshots: ' + droplet.snapshot_ids.length +
+              '\t\t\t\tFeatures: ' + droplet.features +
+              '\nBackups: ' + droplet.backup_ids.length +
+              '\t\t\t\tTags' + ': ' + (droplet.tags.length === 0 ? 'None' : droplet.tags));
+
   console.log('\n' + basicInfo.toString() + '\n');
+  console.log('Networks:\n');
+  console.log(netInfo.toString() + '\n');
+  console.log('Image:\n');
+  console.log(imageTable.toString() + '\n');
 };
 
 
@@ -218,7 +273,7 @@ cli
 
 cli
   .command('authorize <token>')
-  .description('set a new DigitalOcean account token')
+  .description('set a new token')
   .action(function (token) {
     request.get(baseUrl + '/droplets', auth).on('error', function (err) {
       console.log('Error: ' + err);
@@ -264,6 +319,13 @@ cli
         }
       });
 
+      if (droplet.name === undefined) {
+        spinner.stop();
+
+        console.log(chalk.red('Error') + ': the Droplet \"' + arg + '\" cannot be found');
+        return;
+      }
+
       let dropletId = droplet.id;
       let dropletName = droplet.name;
       let option;
@@ -280,11 +342,6 @@ cli
 
       request.get(baseUrl + '/droplets/' + dropletId + '/' + option, auth, function (error, response, body) {
         spinner.stop();
-
-        if (dropletName === undefined) {
-          console.log(chalk.red('Error') + ': the Droplet \"' + arg + '\" cannot be found');
-          return;
-        }
 
         let output = JSON.parse(body);
         let totalResults = output[Object.keys(output)[0]].length;
@@ -314,7 +371,7 @@ cli
 
 cli
   .command('list [tag_name]')
-  .description('list all available Droplets')
+  .description('list all Droplets in your account')
   .action(function (tag_name) {
     spinner.start();
     request.get(baseUrl + '/droplets?' + (tag_name ? tag_name : ''), auth, function (error, response, body) {
