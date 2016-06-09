@@ -373,7 +373,7 @@ cli
   .description('list all Droplets in your account')
   .action(function (tag_name) {
     spinner.start();
-    request.get(baseUrl + '/droplets?' + (tag_name ? tag_name : ''), auth, function (error, response, body) {
+    request.get(baseUrl + '/droplets?' + (tag_name ? 'tag_name=' + tag_name : ''), auth, function (error, response, body) {
       spinner.stop();
 
       let data = JSON.parse(body);
