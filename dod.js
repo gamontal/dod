@@ -252,8 +252,7 @@ let printDropletInfo = function (arg, droplet) {
   console.log('\nDroplet: ' + chalk.cyan(droplet.name) +
               '\t\tVirtual CPUs: ' + droplet.vcpus +
               '\nLocked: ' + (droplet.locked === false ? chalk.green(droplet.locked) : chalk.red(droplet.locked)) +
-              '\t\t\t\tKernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name +
-                              ' (' + droplet.kernel.version + ')') +
+              '\t\t\t\tKernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name) +
               '\nSnapshots: ' + droplet.snapshot_ids.length +
               '\t\t\t\tFeatures: ' + droplet.features +
               '\nBackups: ' + droplet.backup_ids.length +
@@ -269,11 +268,11 @@ let printDropletInfo = function (arg, droplet) {
 
 cli
   .version(require('./package.json').version)
-  .usage('[command] [options] <droplet_name|droplet_id>');
+  .usage('[command] [options] <droplet_id>');
 
 cli
-  .command('authorize <token>')
-  .description('set a new token')
+  .command('auth <token>')
+  .description('set a new access token')
   .action(function (token) {
     request.get(baseUrl + '/droplets', auth).on('error', function (err) {
       console.log('Error: ' + err);
@@ -290,7 +289,7 @@ cli
   });
 
 cli
-  .arguments('<droplet_name|droplet_id>')
+  .arguments('<droplet_id>')
   .option('-k, --kernels', 'list of all kernels available to a Droplet')
   .option('-s, --snapshots', 'retrieve the snapshots that have been created from a Droplet')
   .option('-b, --backups', 'retrieve any backups associated with a Droplet')
@@ -314,12 +313,12 @@ cli
       let droplet = {};
 
       droplets.forEach(function (d) {
-        if ((d.name === arg) || (d.id === Number(arg))) {
+        if (d.id === Number(arg)) {
           droplet = d;
         }
       });
 
-      if (droplet.name === undefined) {
+      if (droplet.id === undefined) {
         spinner.stop();
 
         console.log(chalk.red('Error') + ': the Droplet \"' + arg + '\" cannot be found');
