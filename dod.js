@@ -98,7 +98,7 @@ let printSnapshots = function (snapshots) {
       snapshot.distribution,
       snapshot.public,
       snapshot.regions,
-      snapshot.size_gigabytes,
+      snapshot.size_gigabytes + 'GB',
       snapshot.min_disk_size
     ]);
   });
@@ -124,7 +124,7 @@ let printBackups = function (backups) {
       backup.distribution,
       backup.public,
       backup.regions,
-      backup.size,
+      backup.size_gigabutes + 'GB',
       backup.min_disk_size
     ]);
   });
@@ -177,8 +177,8 @@ let printNeighbors = function (neighbors) {
       droplet.networks.v4[0].ip_address,
       (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
       droplet.image.distribution,
-      droplet.size_slug,
-      droplet.disk + 'gb',
+      droplet.memory + 'MB',
+      droplet.disk + 'GB',
       droplet.region.name + ' (' + droplet.region.slug + ')'
     ]);
   });
@@ -214,8 +214,8 @@ let printDropletInfo = function (arg, droplet) {
     droplet.networks.v4[0].ip_address,
     (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
     droplet.image.distribution,
-    droplet.size_slug,
-    droplet.disk + 'gb',
+    droplet.memory + 'MB',
+    droplet.disk + 'GB',
     droplet.region.name + ' (' + droplet.region.slug + ')'
   ]);
 
@@ -246,7 +246,7 @@ let printDropletInfo = function (arg, droplet) {
     droplet.image.distribution,
     droplet.image.public,
     droplet.image.type,
-    Math.round(droplet.image.size_gigabytes) + 'gb'
+    Math.round(droplet.image.size_gigabytes) + 'GB'
   ]);
 
   console.log('\nDroplet: ' + chalk.cyan(droplet.name) +
@@ -321,7 +321,7 @@ cli
       if (droplet.id === undefined) {
         spinner.stop();
 
-        console.log(chalk.red('Error') + ': the Droplet \"' + arg + '\" cannot be found');
+        console.log('Error: the Droplet with ID `' + arg + '` cannot be found');
         return;
       }
 
@@ -345,8 +345,8 @@ cli
         let output = JSON.parse(body);
         let totalResults = output[Object.keys(output)[0]].length;
 
-        console.log(chalk.cyan('Droplet') + ': ' + dropletName + ', ' +
-                    chalk.cyan('Total results') + ': ' + totalResults);
+        console.log('Droplet: ' + dropletName + ', ' +
+                    'Total results: ' + totalResults);
 
         if (totalResults === 0) { return; }
 
@@ -398,17 +398,17 @@ cli
         dropletsList.push([
           droplet.id,
           moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
-          droplet.name,
+          chalk.cyan(droplet.name),
           droplet.networks.v4[0].ip_address,
           (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
           droplet.image.distribution,
-          droplet.size_slug,
-          droplet.disk + 'gb',
+          droplet.memory + 'MB',
+          droplet.disk + 'GB',
           droplet.region.name + ' (' + droplet.region.slug + ')'
         ]);
       });
 
-      console.log(chalk.cyan('Droplets') + ': ' + droplets.length);
+      console.log('Droplets: ' + droplets.length);
       console.log('\n' + dropletsList.toString() + '\n');
 
       return;
