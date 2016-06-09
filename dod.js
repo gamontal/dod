@@ -35,7 +35,7 @@ let getUserHome = function () {
 // Fetch the configuration file
 const CONFIG_FILE = getUserHome() + '/.dodrc.yml';
 
-let token; // this variable will store the token for the current session
+let config, token; // this variable will store the token for the current session
 
 (function () {
   // make sure the configuration file exists
@@ -50,7 +50,8 @@ let token; // this variable will store the token for the current session
   });
 
   try {
-    token = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8')); // load config file
+    config = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8')); // load config file
+    token = config.access_token;
   } catch (e) {
     console.log(chalk.red('Type \"authorize\" and provide your API token to authorize your DigitalOcean account.'));
   }
@@ -279,7 +280,7 @@ cli
       return;
     });
 
-    fs.writeFile(CONFIG_FILE, token, function(err) {
+    fs.writeFile(CONFIG_FILE, 'access_token: ' + token, function(err) {
       if (err) {
         console.log('Error:' + err);
       } else {
