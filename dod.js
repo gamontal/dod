@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+/* TODO
+   - CREATE Droplet command
+   - DELETE Droplet command
+   - Add Droplet actions
+ */
+
 'use strict';
 
 const fs = require('fs');
@@ -192,7 +198,7 @@ let printDropletInfo = function (arg, droplet) {
   let basicInfo = new Table({
     chars: tableOptions.chars,
     style: tableOptions.style,
-    head: ['ID', 'CREATED', 'NAME', 'PUBLIC IP (IPv4)',
+    head: ['ID', 'CREATED', 'PUBLIC IP (IPv4)',
            'STATUS', 'IMAGE', 'MEMORY', 'DISK', 'REGION']
   });
 
@@ -211,7 +217,6 @@ let printDropletInfo = function (arg, droplet) {
   basicInfo.push([
     droplet.id,
     moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
-    droplet.name,
     droplet.networks.v4[0].ip_address,
     (droplet.status === 'active' ? chalk.green(droplet.status) : chalk.red(droplet.status)),
     droplet.image.distribution,
