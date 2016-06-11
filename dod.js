@@ -1,11 +1,5 @@
 #!/usr/bin/env node
 
-/* TODO
-   - CREATE Droplet command
-   - DELETE Droplet command
-   - Add Droplet actions
- */
-
 'use strict';
 
 const fs = require('fs');
@@ -16,7 +10,7 @@ const ora = require('ora');
 const Table = require('cli-table');
 const chalk = require('chalk');
 const cli = require('commander');
-const spinner = ora({ text: 'Fetching ...', spinner: 'line' });
+const spinner = ora({ spinner: 'line' });
 
 // cli-table (module) chars and style options (borderless table)
 const tableOptions = {
@@ -30,8 +24,16 @@ const tableOptions = {
   }
 };
 
-// list of common errors
-const errors = ['Error: account unauthorized, please provide a valid API token.'];
+const info = [
+  'Type \"authorize\" and provide your API token to authorize your DigitalOcean account.',
+  'A new token has been added.',
+  'Droplet has been created.'
+];
+
+const errors = [
+  'Error: account unauthorized, please provide a valid API token.',
+  'Error: unable to create Droplet.'
+];
 
 // Get the user's home directory
 let getUserHome = function () {
@@ -59,7 +61,7 @@ let config, token; // this variable will store the token for the current session
     config = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8')); // load config file
     token = config.access_token;
   } catch (e) {
-    console.log(chalk.red('Type \"authorize\" and provide your API token to authorize your DigitalOcean account.'));
+    console.log(chalk.red(info[0]));
   }
 }());
 
@@ -255,7 +257,7 @@ let printDropletInfo = function (arg, droplet) {
     Math.round(droplet.image.size_gigabytes) + 'GB'
   ]);
 
-  console.log('\nDroplet: ' + chalk.cyan(droplet.name) +
+  console.log('\nDroplet Name: ' + chalk.cyan(droplet.name) +
               '\t\tVirtual CPUs: ' + droplet.vcpus +
               '\nLocked: ' + (droplet.locked === false ? chalk.green(droplet.locked) : chalk.red(droplet.locked)) +
               '\t\t\t\tKernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name) +
@@ -289,7 +291,7 @@ cli
       if (err) {
         console.log('Error:' + err);
       } else {
-        console.log('A new token has been added.');
+        console.log(info[1]);
       }
     });
   });
@@ -302,6 +304,7 @@ cli
   .option('-a, --actions', 'retrieve all actions that have been executed on a Droplet')
   .option('-n, --neighbors', 'retrieve a list of droplets that are running on the same physical server')
   .action(function (arg) {
+    spinner.text = 'Fetching Droplet data ...';
     spinner.start();
 
     request.get(baseUrl + '/droplets', auth, function (error, response, body) {
@@ -351,8 +354,8 @@ cli
         let output = JSON.parse(body);
         let totalResults = output[Object.keys(output)[0]].length;
 
-        console.log('Droplet: ' + dropletName + ', ' +
-                    'Total results: ' + totalResults);
+        console.log('Droplet Name: ' + dropletName + ', ' +
+                    'Total Results: ' + totalResults);
 
         if (totalResults === 0) { return; }
 
@@ -376,8 +379,9 @@ cli
 
 cli
   .command('list [tag_name]')
-  .description('list all Droplets in your account')
+  .description('list Droplets')
   .action(function (tag_name) {
+    spinner.text = 'Fetching Droplet list ...';
     spinner.start();
     request.get(baseUrl + '/droplets?' + (tag_name ? 'tag_name=' + tag_name : ''), auth, function (error, response, body) {
       spinner.stop();
@@ -419,6 +423,50 @@ cli
 
       return;
     });
+  });
+
+cli
+  .command('create <droplet_name>')
+  .description('create a Droplet')
+  .option('--region <region>', 'region of Droplet')
+  .option('--image <image>', 'image slug (e.g. ubuntu-14-04-x64)')
+  .option('--size <size>', 'size of Droplet')
+  .option('--ssh-keys <keys>', 'comma seperated list of SSH Key names')
+  .option('--backups', 'turn on backups')
+  .option('--ipv6', 'turn on IPv6 networking')
+  .option('--priv-net', 'turn on private networking')
+  .option('--user-data', 'user data for creating server')
+  .action(function (name, options) {
+    spinner.text = 'Creating Droplet: ' + name + ' ...';
+    spinner.start();
+
+    let payload = {
+      name: name,
+      region: options.region || 'nyc2',
+      size: options.size || '512mb',
+      image: options.image || 'ubuntu-14-04-x64',
+      ssh_keys: options.sshKeys || null,
+      backups: options.backup || false,
+      ipv6: options.ipv6 || false,
+      user_data: options.userData || null,
+      private_networking: options.privNet || null
+    };
+
+    request.post(
+      baseUrl + '/droplets',
+      {
+        json: true,
+        auth: auth.auth,
+        body: payload
+      }, function (error, response, body) {
+        spinner.stop();
+
+        if (response.statusCode == 202) {
+          console.log(chalk.green(info[2] + '\n'));
+        } else {
+          console.log(errors[1]);
+        }
+      });
   });
 
 cli.parse(process.argv);
