@@ -27,12 +27,14 @@ const tableOptions = {
 const info = [
   'Type \"authorize\" and provide your API token to authorize your DigitalOcean account.',
   'A new token has been added.',
-  'Droplet has been created.'
+  'Droplet has been created.',
+  'Droplet has been deleted.'
 ];
 
 const errors = [
   'Error: account unauthorized, please provide a valid API token.',
-  'Error: unable to create Droplet.'
+  'Error: unable to create Droplet.',
+  'Error: unable to delete Droplet.'
 ];
 
 // Get the user's home directory
@@ -275,8 +277,7 @@ let printDropletInfo = function (arg, droplet) {
 
 
 cli
-  .version(require('./package.json').version)
-  .usage('[command] [options] <droplet_id>');
+  .version(require('./package.json').version);
 
 cli
   .command('auth <token>')
@@ -461,12 +462,34 @@ cli
       }, function (error, response, body) {
         spinner.stop();
 
-        if (response.statusCode == 202) {
-          console.log(chalk.green(info[2] + '\n'));
+        if (response.statusCode === 202) {
+          console.log(chalk.green(info[2]) + '\n');
         } else {
           console.log(errors[1]);
         }
       });
+  });
+
+cli
+  .command('delete <droplet_id>')
+  .description('delete a Droplet')
+  .option('--tag <tag_name>', 'delete Droplets by a tag')
+  .action(function (droplet_id, options) {
+    spinner.text = 'Deleting Droplet ...';
+    spinner.start();
+
+    request
+      .delete(
+        baseUrl + '/droplets' + (options.tag ? '?tag_name=' + options.tag : '/' + droplet_id), auth,
+        function (error, response, body) {
+          spinner.stop();
+
+          if (response.statusCode === 204) {
+            console.log(chalk.green(info[3]) + '\n');
+          } else {
+            console.log(errors[2]);
+          }
+        });
   });
 
 cli.parse(process.argv);
