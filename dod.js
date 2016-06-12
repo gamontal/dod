@@ -199,7 +199,16 @@ let printNeighbors = function (neighbors) {
 let printDropletInfo = function (arg, droplet) {
   spinner.stop();
 
-  let basicInfo = new Table({
+  let basicInfo1 = new Table({
+    chars: tableOptions.chars,
+    style: {
+      'compact' : true,
+      'padding-left': 0
+    },
+    head: []
+  });
+
+  let basicInfo2 = new Table({
     chars: tableOptions.chars,
     style: tableOptions.style,
     head: ['ID', 'CREATED', 'PUBLIC IP (IPv4)',
@@ -218,7 +227,16 @@ let printDropletInfo = function (arg, droplet) {
     head: ['ID', 'NAME', 'CREATED', 'DISTRIBUTION', 'PUBLIC', 'TYPE', 'SIZE']
   });
 
-  basicInfo.push([
+  basicInfo1.push(['Droplet Name: ' + chalk.cyan(droplet.name) +
+                   '\nLocked: ' + (droplet.locked === false ? chalk.green(droplet.locked) : chalk.red(droplet.locked)) +
+                   '\nSnapshots: ' + droplet.snapshot_ids.length +
+                   '\nBackups: ' + droplet.backup_ids.length,
+                   '  Virtual CPUs: ' + droplet.vcpus +
+                   '\n  Kernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name) +
+                   '\n  Features: ' + droplet.features +
+                   '\n  Tags' + ': ' + (droplet.tags.length === 0 ? 'None' : droplet.tags)]);
+
+  basicInfo2.push([
     droplet.id,
     moment(droplet.created_at).format('MMMM Do YYYY, h:mm:ss a'),
     droplet.networks.v4[0].ip_address,
@@ -259,16 +277,8 @@ let printDropletInfo = function (arg, droplet) {
     Math.round(droplet.image.size_gigabytes) + 'GB'
   ]);
 
-  console.log('\nDroplet Name: ' + chalk.cyan(droplet.name) +
-              '\t\tVirtual CPUs: ' + droplet.vcpus +
-              '\nLocked: ' + (droplet.locked === false ? chalk.green(droplet.locked) : chalk.red(droplet.locked)) +
-              '\t\t\t\tKernel: ' + (droplet.kernel === null ? chalk.magenta('NULL') : droplet.kernel.name) +
-              '\nSnapshots: ' + droplet.snapshot_ids.length +
-              '\t\t\t\tFeatures: ' + droplet.features +
-              '\nBackups: ' + droplet.backup_ids.length +
-              '\t\t\t\tTags' + ': ' + (droplet.tags.length === 0 ? 'None' : droplet.tags));
-
-  console.log('\n' + basicInfo.toString() + '\n');
+  console.log('\n' + basicInfo1.toString());
+  console.log('\n' + basicInfo2.toString() + '\n');
   console.log('Networks:\n');
   console.log(netInfo.toString() + '\n');
   console.log('Image:\n');
