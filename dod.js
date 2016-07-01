@@ -2,9 +2,7 @@
 
 'use strict';
 
-const fs = require('fs');
 const request = require('request');
-const yaml = require('js-yaml');
 const moment = require('moment');
 const ora = require('ora');
 const Table = require('cli-table');
@@ -25,7 +23,6 @@ const tableOptions = {
 };
 
 const info = [
-  'Type \"authorize\" and provide your API token to authorize your DigitalOcean account.',
   'A new token has been added.',
   'Droplet has been created.',
   'Droplet has been deleted.'
@@ -37,42 +34,8 @@ const errors = [
   'Error: unable to delete Droplet.'
 ];
 
-// Get the user's home directory
-let getUserHome = function () {
-  return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
-};
-
-// Fetch the configuration file
-const CONFIG_FILE = getUserHome() + '/.dodrc.yml';
-
-let config, token; // this variable will store the token for the current session
-
-(function () {
-  // make sure the configuration file exists
-  fs.stat(CONFIG_FILE, function (err) {
-    if (err === null) {
-      return; // exit function if the config file exist
-    } else if (err.code == 'ENOENT') {
-      fs.writeFile(CONFIG_FILE); // create config file if it doesn't exist
-    } else {
-      console.log('Unexpected error: ', err.code);
-    }
-  });
-
-  try {
-    config = yaml.safeLoad(fs.readFileSync(CONFIG_FILE, 'utf8')); // load config file
-    token = config.access_token;
-  } catch (e) {
-    console.log(chalk.red(info[0]));
-  }
-}());
-
-const baseUrl = 'https://api.digitalocean.com/v2'; // DigitalOcean API base url
-
-// store authentication object for future requests
-const auth = {
-  'auth': { 'bearer': token }
-};
+const baseUrl = 'https://api.digitalocean.com/v2';
+const auth = require('./auth'); // this validates and returns the access token
 
 /* Print out the list of kernels */
 let printKernels = function (kernels) {
@@ -302,7 +265,7 @@ cli
       if (err) {
         console.log('Error:' + err);
       } else {
-        console.log(info[1]);
+        console.log(info[0]);
       }
     });
   });
@@ -473,7 +436,7 @@ cli
         spinner.stop();
 
         if (response.statusCode === 202) {
-          console.log(chalk.green(info[2]) + '\n');
+          console.log(chalk.green(info[1]) + '\n');
         } else {
           console.log(errors[1]);
         }
@@ -483,7 +446,7 @@ cli
 cli
   .command('delete <droplet_id>')
   .description('delete a Droplet')
-  .option('--tag <tag_name>', 'delete Droplets by a tag')
+  .option('--tag <tag_name>', 'delete multiple Droplets by tag')
   .action(function (droplet_id, options) {
     spinner.text = 'Deleting Droplet ...';
     spinner.start();
@@ -495,7 +458,7 @@ cli
           spinner.stop();
 
           if (response.statusCode === 204) {
-            console.log(chalk.green(info[3]) + '\n');
+            console.log(chalk.green(info[2]) + '\n');
           } else {
             console.log(errors[2]);
           }
